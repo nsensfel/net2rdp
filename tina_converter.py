@@ -4,7 +4,7 @@
 import argparse
 import re
 
-TINA_TRANSITION_REGEX = re.compile('tr t([0-9]+) : {(.*)} [0,w[ p([0-9]+) -> p([0-9]+)')
+TINA_TRANSITION_REGEX = re.compile('tr t([0-9]+) : {(.*)} \[0,w\[ p([0-9]+) -> p([0-9]+)')
 TINA_PLACE_W_TOKEN_REGEX = re.compile('pl p([0-9]+) : .* \(([0-9]+)\)')
 TINA_PLACE_TOKEN_REGEX = re.compile('pl p([0-9]+) : .*')
 TINA_NET_REGEX = re.compile('net (.*)')
@@ -46,7 +46,7 @@ ACTION['ENVOI_BT'] = (18, True)
 def parse_translation_table (tt_file):
   tt = dict()
   for line in tt_file:
-    data = line.split("::")
+    data = line.replace('\n','').replace('\r', '').split("::")
 
     if (len(data) == 2): # Action
       if (data[0] in tt):
@@ -137,7 +137,7 @@ def parse_translation_table (tt_file):
         )
         exit(-1)
 
-      tt[data[0]] = ('condition', (act_id, CONDITION_OP[data[2]], cond_val))
+      tt[data[0]] = ('condition', (cond_id, CONDITION_OP[data[2]], cond_val))
 
     else:
       print('[W] Ignored invalid Translation Table entry: "' + line + '"')
@@ -151,6 +151,11 @@ def convert_tina_net (net_file, tt):
   places = dict()
 
   for line in net_file:
+    line = line.replace('\r','').replace('\n','')
+
+    if (line == ''):
+      continue
+
     matched = TINA_NET_REGEX.search(line)
 
     if (matched):
