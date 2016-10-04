@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 # vim:set et sw=2 ts=2 tw=80:
-
+# tina_converter VERSION 2
 import argparse
 import re
 
+## 'CONSTANTS' ################################################################
 TINA_TRANSITION_REGEX = re.compile('tr t([0-9]+) : {(.*)} \[0,w\[ (.*) -> (.*)')
 TINA_PLACE_W_TOKEN_REGEX = re.compile('pl p([0-9]+) : .* \(([0-9]+)\)')
 TINA_PLACE_TOKEN_REGEX = re.compile('pl p([0-9]+) : .*')
@@ -45,6 +46,8 @@ ACTION['GO_LAST_RD_WP'] = (24, False)
 ACTION['GO_NEXT_WP'] = (25, False)
 ACTION['ETALON_CAPT_LUMIERE'] = (26, False)
 ACTION['ENVOI_BT'] = (18, True)
+
+## FUNCTIONS  ##################################################################
 
 def parse_translation_table (tt_file):
   tt = dict()
@@ -147,8 +150,19 @@ def parse_translation_table (tt_file):
 
   return tt
 
-def handle_link (link):
-  return (link if '*' in link else (link + '*1')).replace('p', 'X')
+def handle_link (link, pa):
+  if ('*' in link):
+    data = link.split('*')
+
+    if (data[0] not in pa):
+      pa[data[0]] = len(pa)
+
+    return ('X' + str(pa[link]) + '*' + data[1])
+  else:
+    if (link not in pa):
+      pa[link] = len(pa)
+
+    return ('X' + str(pa[link]) + '*1')
 
 def handle_condition (cond, tt):
   if (cond not in tt):
@@ -184,7 +198,7 @@ def handle_action (act, tt):
 
   return (str(a_id) + ',' + str(a_val))
 
-def handle_transition (transition_id, label, inputs, outputs, tt):
+def handle_transition (transition_id, label, inputs, outputs, tt, pa):
   label = label.split('/')
   inputs = inputs.split(' ')
   outputs = outputs.split(' ')
@@ -206,14 +220,14 @@ def handle_transition (transition_id, label, inputs, outputs, tt):
     exit(-1)
 
   result = 't' + transition_id + ':'
-  result += ','.join([handle_link(input_link) for input_link in inputs])
+  result += ','.join([handle_link(input_link, pa) for input_link in inputs])
 
   if (len(conditions) == 0):
     result += ';?'
   else:
     result += ';' + '/'.join([handle_condition(cond, tt) for cond in conditions])
 
-  result += ';' + ','.join([handle_link(output_link) for output_link in outputs])
+  result += ';' + ','.join([handle_link(output_link, pa) for output_link in outputs])
 
   if (len(actions) == 0):
     result += ';?'
@@ -228,7 +242,8 @@ def handle_transition (transition_id, label, inputs, outputs, tt):
 def convert_tina_net (net_file, tt):
   first_line = "1,0"
   result = ""
-  places = dict()
+  tokens_at = dict()
+  places_aliases = dict()
 
   for line in net_file:
     line = line.replace('\r','').replace('\n','')
@@ -245,7 +260,8 @@ def convert_tina_net (net_file, tt):
           matched.group(2),
           matched.group(3),
           matched.group(4),
-          tt
+          tt,
+          places_aliases
         )
       )
       continue
@@ -253,13 +269,13 @@ def convert_tina_net (net_file, tt):
     matched = TINA_PLACE_W_TOKEN_REGEX.search(line)
 
     if (matched):
-      places[int(matched.group(1))] = matched.group(2)
+      tokens_at[places_aliases['p' + matched.group(1)]] = matched.group(2)
       continue
 
     matched = TINA_PLACE_TOKEN_REGEX.search(line)
 
     if (matched):
-      places[int(matched.group(1))] = str(0)
+      tokens_at[places_aliases['p' + matched.group(1)]] = '0'
       continue
 
     matched = TINA_NET_REGEX.search(line)
@@ -272,9 +288,9 @@ def convert_tina_net (net_file, tt):
     exit(-1)
 
   first_line = (
-    str(len(places) + 1)
+    str(len(tokens_at) + 1)
     + ','
-    + ','.join([places[i] for i in range(0,len(places))])
+    + ','.join([('0' if i not in tokens_at else tokens_at[i]) for i in range(0, len(tokens_at))])
   ) + ',0'
 
   return (first_line + result)
@@ -301,5 +317,7 @@ args = parser.parse_args()
 
 translation_table = parse_translation_table(args.translation_table)
 converted_tn = convert_tina_net(args.net_file, translation_table)
+args.output_file.write(converted_tn)
+args.output_file.close()
 #print("Result:")
-print(converted_tn)
+#print(converted_tn)

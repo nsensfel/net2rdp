@@ -1,0 +1,38 @@
+## HOW TO USE ##################################################################
+* You need the following:
+- A command line interface.
+- Python 3.
+- The ".net" file corresponding to your petri file (see associated section).
+- A translation table (see associated section).
+
+python3 tina_converter.py NET_FILE TRANSLATION_TABLE OUTPUT_FILE
+
+Example:
+python3 tina_converter.py question1.net translation_table.txt out.rdp
+
+## HOW TO GET THE .NET FILE ####################################################
+Having modeled your Petri net under Tina (http://projects.laas.fr/tina/), you
+can go in the "edit" menu and select "textify". You should be presented with
+a textual representation of your Petri net. You should then be able to create
+the ".net" file using the "File" menu, by selecting "save as".
+
+## HOW TO BUILD YOUR TRANSLATION TABLE #########################################
+The translation table is a text file in which each line represents an entry.
+
+#### REPRESENTING A CONDITION
+The syntax is as follows:
+whatever_you_put_in_your_petri_net::THE_ACTUAL_VARIABLE::THE_OPERATOR::THE_VALUE
+THE_OPERATOR should be included in {=,<,>,>=,<=}, or that field left empty
+(which is apparently valid syntax, but I know nothing of the semantics).
+THE_VALUE must be a positive integer (i.e. THE_VALUE >= 0). For 'boolean'
+variables, you must use 1 for 'true' and 0 for 'false'.
+Example:
+noAction::ACTION_EN_COURS::=::0
+
+#### REPRESENTING AN ACTION WITH NO PARAMETER
+The syntax is as follows:
+whatever_you_put_in_your_petri_net::THE_ACTUAL_NAME
+
+#### REPRESENTING AN ACTION WITH PARAMETERS
+The syntax is as follows:
+whatever_you_put_in_your_petri_net::THE_ACTUAL_NAME::THE_VALUE
