@@ -4,12 +4,12 @@
 import argparse
 import re
 
-TINA_TRANSITION_REGEX = re.compile('tr t([0-9]+) : {(.*)} \[0,w\[ p([0-9]+) -> p([0-9]+)')
+TINA_TRANSITION_REGEX = re.compile('tr t([0-9]+) : {(.*)} \[0,w\[ (.*) -> (.*)')
 TINA_PLACE_W_TOKEN_REGEX = re.compile('pl p([0-9]+) : .* \(([0-9]+)\)')
 TINA_PLACE_TOKEN_REGEX = re.compile('pl p([0-9]+) : .*')
 TINA_NET_REGEX = re.compile('net (.*)')
-
 CONDITION_OP = dict()
+CONDITION_OP[''] = 0
 CONDITION_OP['='] = 1
 CONDITION_OP['<='] = 2
 CONDITION_OP['>='] = 3
@@ -19,7 +19,8 @@ CONDITION_OP['>'] = 5
 CONDITION = dict()
 # (ID, MIN_VALUE, MAX_VALUE)
 # MIN_VALUE and MAX_VALUE are included in the acceptance range.
-CONDITION['PRISE'] = (0, 0, 1)
+CONDITION[''] = (0, 0, 0)
+CONDITION['PRISE'] = (1, 0, 1)
 CONDITION['LUMIERE1'] = (3, 0, 100)
 CONDITION['FIN_MVMT'] = (11, 0, 1)
 CONDITION['ACTION_EN_COURS'] = (12, 0, 1)
@@ -29,8 +30,10 @@ CONDITION['BT_2'] = (15, 0, 1)
 CONDITION['BT_3'] = (16, 0, 1)
 CONDITION['BT_4'] = (17, 0, 1)
 
+
 ACTION = dict()
 # (ID, ACCEPTS_PARAM)
+ACTION[''] = (0, False)
 ACTION['LEVER_BRAS'] = (7, False)
 ACTION['BAISSER_BRAS'] = (8, False)
 ACTION['BIPER'] = (11, False)
@@ -85,7 +88,7 @@ def parse_translation_table (tt_file):
         print('[E] "' + data[0] + '" uses "' + data[1] + '" with a parameter')
         exit(-1)
 
-      tt[data[0]] = ('action', (act_id, data[2]))
+      tt[data[0]] = ('action_w_param', (act_id, data[2]))
 
     elif (len(data) == 4): # Condition
       if (data[0] in tt):
@@ -144,8 +147,85 @@ def parse_translation_table (tt_file):
 
   return tt
 
+def handle_link (link):
+  return (link if '*' in link else (link + '*1')).replace('p', 'X')
+
+def handle_condition (cond, tt):
+  if (cond not in tt):
+    print('[E] Token "' + cond + '" not defined in transition table.')
+    exit(-1)
+
+  (d_type, data) = tt[cond]
+
+  if (d_type != 'condition'):
+    print('[E] Token "' + cond + ' is incorrectly used as a condition.')
+    exit(-1)
+
+  (c_id, c_op, c_val) = data
+
+  return (str(c_id) + ',' + str(c_op) + ',' + str(c_val))
+
+def handle_action (act, tt):
+  if (act not in tt):
+    print('[E] Token "' + act + '" not defined in transition table.')
+    exit(-1)
+
+  (d_type, data) = tt[act]
+
+  if (d_type != 'action' and d_type != 'action_w_param'):
+    print('[E] Token "' + cond + ' is incorrectly used as an action.')
+    exit(-1)
+
+  if (d_type == 'action'):
+    a_id = data
+    a_val = 0
+  else:
+    (a_id, a_val) = data
+
+  return (str(a_id) + ',' + str(a_val))
+
+def handle_transition (transition_id, label, inputs, outputs, tt):
+  label = label.split('/')
+  inputs = inputs.split(' ')
+  outputs = outputs.split(' ')
+  conditions = label[0].split(',')
+  actions = label[1].split(',')
+
+  if ('' in conditions):
+    conditions.remove('')
+
+  if ('' in actions):
+    actions.remove('')
+
+  if (len(conditions) > 4):
+    print('[E] Transition "' + transition_id + '" has too many conditions.')
+    exit(-1)
+
+  if (len(actions) > 4):
+    print('[E] Transition "' + transition_id + '" has too many actions.')
+    exit(-1)
+
+  result = 't' + transition_id + ':'
+  result += ','.join([handle_link(input_link) for input_link in inputs])
+
+  if (len(conditions) == 0):
+    result += ';?'
+  else:
+    result += ';' + '/'.join([handle_condition(cond, tt) for cond in conditions])
+
+  result += ';' + ','.join([handle_link(output_link) for output_link in outputs])
+
+  if (len(actions) == 0):
+    result += ';?'
+  else:
+    result += ';' + '/'.join([handle_action(act, tt) for act in actions])
+
+  # We don't support priorities
+  result += ';1'
+
+  return result
+
 def convert_tina_net (net_file, tt):
-  name = "noname"
   first_line = "1,0"
   result = ""
   places = dict()
@@ -156,23 +236,33 @@ def convert_tina_net (net_file, tt):
     if (line == ''):
       continue
 
-    matched = TINA_NET_REGEX.search(line)
-
-    if (matched):
-      name = matched.group(1)
-      continue
-
     matched = TINA_TRANSITION_REGEX.search(line)
 
     if (matched):
+      result += '\n' + (
+        handle_transition(
+          matched.group(1),
+          matched.group(2),
+          matched.group(3),
+          matched.group(4),
+          tt
+        )
+      )
       continue
 
     matched = TINA_PLACE_W_TOKEN_REGEX.search(line)
 
     if (matched):
+      places[int(matched.group(1))] = matched.group(2)
       continue
 
     matched = TINA_PLACE_TOKEN_REGEX.search(line)
+
+    if (matched):
+      places[int(matched.group(1))] = str(0)
+      continue
+
+    matched = TINA_NET_REGEX.search(line)
 
     if (matched):
       continue
@@ -181,15 +271,13 @@ def convert_tina_net (net_file, tt):
     print('[P] If this was unexpected, please inform the developer.')
     exit(-1)
 
-  result = (
-    first_line
-    + result
-    + '\n\r'
-    + "net "
-    + name
-  )
+  first_line = (
+    str(len(places) + 1)
+    + ','
+    + ','.join([places[i] for i in range(0,len(places))])
+  ) + ',0'
 
-  return result
+  return (first_line + result)
 
 parser = argparse.ArgumentParser(
   description='Converts a Tina NET file into a RDP one, using a translation table.'
@@ -213,5 +301,5 @@ args = parser.parse_args()
 
 translation_table = parse_translation_table(args.translation_table)
 converted_tn = convert_tina_net(args.net_file, translation_table)
-print("Result:")
+#print("Result:")
 print(converted_tn)
