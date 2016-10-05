@@ -7,8 +7,6 @@ import re
 # Possible improvements
 # - Remove the needless restriction on place names (pretty much anything should
 #   be fine, since we're renaming them anyway.
-# - Allow for a '-direct' invocation parameter, letting the user directly type
-#   LeTos names and operators in the Petri net.
 
 ## 'CONSTANTS' ################################################################
 TINA_TRANSITION_REGEX = re.compile('tr t([0-9]+) : {(.*)} \[0,w\[ (.*) -> (.*)')
@@ -22,7 +20,7 @@ CONDITION_OP['<='] = 2
 CONDITION_OP['>='] = 3
 CONDITION_OP['<'] = 4
 CONDITION_OP['>'] = 5
-CONDITION_OPS = ['=', '<=', '>=', '<', '>']
+CONDITION_OPS = ['<=', '>=', '=', '<', '>']
 
 CONDITION = dict()
 # (ID, MIN_VALUE, MAX_VALUE)
@@ -509,7 +507,7 @@ parser = argparse.ArgumentParser(
 parser.add_argument(
   'net_file',
   type=argparse.FileType(mode='r', encoding='UTF-8'),
-  help='The Tinal NET file'
+  help='The Tina NET file'
 )
 parser.add_argument(
   '-t',

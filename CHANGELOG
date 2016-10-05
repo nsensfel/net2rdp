@@ -2,3 +2,9 @@ VERSION 2 (Oct. 4 2016):
    No longer require place names to follow one another (i.e. having only
    places 0, 2, 99121 is now authorized). Before this version, if you had place
    2, you had to have both place 0 and 1.
+VERSION 3 (Oct. 5 2016):
+   You may now have your LeJos conditions and actions directly in the Petri net.
+   The use of a translation table is now optional.
+   Combining both of the above is allowed.
+   Having a translation table entry name after something already in LeJos is no
+   longer allowed.

@@ -3,12 +3,22 @@
 - A command line interface.
 - Python 3.
 - The ".net" file corresponding to your petri file (see associated section).
-- A translation table (see associated section).
+- A translation table (see associated section), if there are any aliases in your
+  Petri net.
 
-python3 tina_converter.py NET_FILE TRANSLATION_TABLE OUTPUT_FILE
+Having transitions with labels such as:
+ACTION_EN_COURS=0/initNave,ETALON_CAPT_LUMIERE,raiseArm
+in your Petri net is authorised. Notice that "ACTION_EN_COURS=0" is LeJos
+syntax, and "initNave" is an alias. To enter LeJos actions with a parameter
+directly in your Petri net, you must use the syntax
+"LEJOS_ACTION_NAME:PARAM_VALUE".
 
-Example:
-python3 tina_converter.py question1.net translation_table.txt out.rdp
+Calling the program:
+python3 tina_converter.py [-t TRANSLATION_TABLE] NET_FILE OUTPUT_FILE
+
+Examples:
+python3 tina_converter.py -t translation_table.txt question1.net out.rdp
+python3 tina_converter.py question5.net out.rdp
 
 ## HOW TO GET THE .NET FILE ####################################################
 Having modeled your Petri net under Tina (http://projects.laas.fr/tina/), you
