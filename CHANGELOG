@@ -8,3 +8,10 @@ VERSION 3 (Oct. 5 2016):
    Combining both of the above is allowed.
    Having a translation table entry name after something already in LeJos is no
    longer allowed.
+VERSION 3 HOTFIX 1 (Oct. 6 2016):
+   Fixes a programming error that made places require a label to be counted.
+VERSION 3 HOTFIX 2 (Oct. 6 2016):
+   Fixes a regex error that made places require to have a label if they had
+   tokens.
+   Correcting those two last errors removed the need for an extra place to
+   be added.

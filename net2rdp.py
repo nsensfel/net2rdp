@@ -10,7 +10,7 @@ import re
 
 ## 'CONSTANTS' ################################################################
 TINA_TRANSITION_REGEX = re.compile('tr t([0-9]+) : {(.*)} \[0,w\[ (.*) -> (.*)')
-TINA_PLACE_W_TOKEN_REGEX = re.compile('pl p([0-9]+) : .* \(([0-9]+)\)')
+TINA_PLACE_W_TOKEN_REGEX = re.compile('pl p([0-9]+) ?.* \(([0-9]+)\)')
 TINA_PLACE_TOKEN_REGEX = re.compile('pl p([0-9]+) : .*')
 TINA_NET_REGEX = re.compile('net (.*)')
 CONDITION_OP = dict()
@@ -486,17 +486,16 @@ def convert_tina_net (net_file, tt):
     print('[P] If this was unexpected, please inform the developer.')
     exit(-1)
 
-  # It appears we have to add an extra place for the output file to be accepted.
   first_line = (
-    str(len(tokens_at) + 1)
+    str(len(places_aliases))
     + ','
     + ','.join(
         [
             ('0' if i not in tokens_at else tokens_at[i])
-            for i in range(0, len(tokens_at))
+            for i in range(0, len(places_aliases))
         ]
     )
-  ) + ',0'
+  )
 
   return (first_line + result)
 
